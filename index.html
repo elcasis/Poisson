@@ -255,13 +255,13 @@ function loadEx(idx){
 }
 
 // ═══════════════════════════════════════════
-// INTERACCIÓN: FICHA
+// INTERACCIÓN: FICHA (CORREGIDO PARA NO CONFUNDIR FASES)
 // ═══════════════════════════════════════════
 function onChip(cid,ph){
     if(S.phase!==ph)return;
-    const el=document.querySelector(`.chip[data-cid="${cid}"]`);
-    if(el.classList.contains('used'))return;
-    document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));
+    const el=document.querySelector(`#ch${ph} .chip[data-cid="${cid}"]`);
+    if(!el || el.classList.contains('used'))return;
+    document.querySelectorAll(`#ch${ph} .chip.sel`).forEach(c=>c.classList.remove('sel'));
     if(S.sel===cid){S.sel=null;return}
     S.sel=cid;el.classList.add('sel');
 }
@@ -281,10 +281,12 @@ function onSlot(el){
 }
 
 // ═══════════════════════════════════════════
-// COLOCAR / QUITAR TIPO
+// COLOCAR / QUITAR TIPO (CORREGIDO PARA NO CONFUNDIR FASES)
 // ═══════════════════════════════════════════
 function plType(type,cid){
-    const chip=document.querySelector(`.chip[data-cid="${cid}"]`);
+    const ph=S.phase;
+    const chip=document.querySelector(`#ch${ph} .chip[data-cid="${cid}"]`);
+    if(!chip) return;
     S.placed[type]=cid;
     document.querySelectorAll(`.fslot[data-type="${type}"]`).forEach(el=>{el.textContent=chip.textContent;el.classList.add('filled')});
     chip.classList.remove('sel');chip.classList.add('used');
@@ -295,7 +297,9 @@ function plType(type,cid){
 function rmType(type){
     const cid=S.placed[type];if(!cid)return;delete S.placed[type];
     document.querySelectorAll(`.fslot[data-type="${type}"]`).forEach(el=>{el.textContent='?';el.classList.remove('filled')});
-    document.querySelector(`.chip[data-cid="${cid}"]`).classList.remove('used');
+    const ph=S.phase;
+    const chip=document.querySelector(`#ch${ph} .chip[data-cid="${cid}"]`);
+    if(chip) chip.classList.remove('used');
     chkFilled();
 }
 function chkFilled(){
@@ -395,9 +399,6 @@ function calcP2(){
         ['rate','time','k','lambda','k'].forEach(t=>{
             let b=100;if(S.hints[t])b=25;else if(S.errs[t]>0)b=50;pts+=b;
         });
-        // Ajuste para no contar 'k' dos veces en puntaje perfecto si se desea, 
-        // pero la estructura original sumaba 5 slots (100*5=500 + 200 = 700). 
-        // Contaremos 5 interacciones lógicas (rate, time, k, lambda, k) = 500 + 200.
         if(S.perfect)pts+=200;
         S.score+=pts;
         if(S.perfect){S.streak++;if(S.streak>S.maxStreak)S.maxStreak=S.streak}else S.streak=0;
@@ -467,7 +468,7 @@ function startGame(){
 
 document.addEventListener('click',e=>{
     if(!e.target.closest('.chip')&&!e.target.closest('.fslot')&&S.sel){
-        document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));S.sel=null;
+        document.querySelectorAll(`#ch${S.phase} .chip.sel`).forEach(c=>c.classList.remove('sel'));S.sel=null;
     }
 });
 </script>
