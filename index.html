@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Desafío Poisson</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Space Grotesk','sans-serif'],mono:['JetBrains Mono','monospace']}}}}</script>
+    <style>
+        :root{--bg:#080d0c;--card:#101a16;--card2:#162420;--border:#1e3a30;--accent:#14b8a6;--accent2:#2dd4bf;--success:#38bdf8;--error:#f87171;--muted:#6b8a80;--fg:#e2f1ec;--formula-bg:#0a1410;--formula-border:#153025;--slot-empty:#121c18;--slot-border:#2e4a3e;--chip-bg:#14201c;--chip-border:#284a3e}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;overflow-x:hidden}
+        .screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+        .hidden{display:none!important}
+        .bg-blob{position:fixed;border-radius:50%;filter:blur(120px);opacity:.1;pointer-events:none;z-index:0}
+        .b1{width:500px;height:500px;background:#14b8a6;top:-150px;left:-100px;animation:bf1 25s ease-in-out infinite}
+        .b2{width:400px;height:400px;background:#38bdf8;bottom:-100px;right:-80px;animation:bf2 20s ease-in-out infinite}
+        @keyframes bf1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,60px)}}
+        @keyframes bf2{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,-80px)}}
+        .wtitle{font-size:clamp(2.2rem,7vw,4rem);font-weight:700;letter-spacing:-.03em;line-height:1.1;background:linear-gradient(135deg,#14b8a6,#2dd4bf 50%,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .formula-hero{font-family:'JetBrains Mono',monospace;font-size:clamp(.85rem,2.5vw,1.2rem);color:var(--muted);padding:.75rem 1.5rem;background:var(--formula-bg);border:1px solid var(--formula-border);border-radius:12px}
+        .top-bar{position:sticky;top:0;z-index:50;background:rgba(8,13,12,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:.6rem 1.2rem;width:100%}
+        .pseg{height:5px;flex:1;border-radius:3px;background:var(--border);transition:background .4s,box-shadow .4s;margin:0 2px}
+        .pseg.sg{background:var(--success);box-shadow:0 0 6px rgba(56,189,248,.4)}
+        .pseg.sa{background:var(--accent);box-shadow:0 0 6px rgba(20,184,166,.4)}
+        .pseg.se{background:var(--error);box-shadow:0 0 6px rgba(248,113,113,.3)}
+        .pseg.sc{background:var(--accent);animation:sp 1.5s ease-in-out infinite}
+        @keyframes sp{0%,100%{opacity:1}50%{opacity:.4}}
+        .pcard{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:740px;width:100%;padding:1.75rem;animation:cin .45s ease-out}
+        @keyframes cin{0%{opacity:0;transform:translateY(25px)}100%{opacity:1;transform:translateY(0)}}
+        .formula-board{font-family:'JetBrains Mono',monospace;background:var(--formula-bg);border:1px solid var(--formula-border);border-radius:10px;padding:1rem 1rem;text-align:center;box-shadow:inset 0 2px 8px rgba(0,0,0,.3);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:1px;line-height:2.4}
+        .ftxt{color:#a7f3d0;font-size:1.05rem}
+        .ftxt sup{font-size:.7em;vertical-align:super}
+        .ftimes{color:#5e8a78;font-size:1.1rem;margin:0 5px}
+        .fslot{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:32px;padding:0 8px;background:var(--slot-empty);border:1.5px dashed var(--slot-border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.95rem;color:var(--muted);cursor:pointer;transition:all .2s;vertical-align:middle;margin:0 2px}
+        .fslot:hover{border-color:var(--accent);background:rgba(20,184,166,.06)}
+        .fslot.filled{border-style:solid;border-color:var(--accent);background:rgba(20,184,166,.12);color:var(--accent2);font-weight:600;cursor:pointer}
+        .fslot.filled:hover{border-color:var(--error);background:rgba(248,113,113,.08)}
+        .fslot.wf{animation:wfl .4s ease}
+        @keyframes wfl{0%,100%{border-color:var(--slot-border);background:var(--slot-empty)}30%{border-color:var(--error);background:rgba(248,113,113,.15)}}
+        .fslot.hg{border-color:var(--accent2)!important;box-shadow:0 0 10px rgba(45,212,191,.25);animation:hgl 1.5s ease-in-out infinite}
+        @keyframes hgl{0%,100%{box-shadow:0 0 8px rgba(45,212,191,.2)}50%{box-shadow:0 0 16px rgba(45,212,191,.4)}}
+        .fslot.done{border-color:var(--success);background:rgba(56,189,248,.1);color:var(--success);cursor:default;border-style:solid}
+        .fslot.done:hover{border-color:var(--success);background:rgba(56,189,248,.1)}
+        .fpre{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 6px;background:rgba(20,184,166,.12);border:1px solid rgba(20,184,166,.25);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--accent2);font-weight:600;vertical-align:middle;margin:0 2px}
+        .fval{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:32px;padding:0 10px;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--success);font-weight:700;vertical-align:middle;margin:0 2px}
+        .chip{display:inline-flex;align-items:center;justify-content:center;padding:.4rem .9rem;background:var(--chip-bg);border:1.5px solid var(--chip-border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:600;color:var(--fg);cursor:pointer;transition:all .2s;user-select:none}
+        .chip:hover:not(.used){border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+        .chip.sel{border-color:var(--accent2);background:rgba(20,184,166,.12);color:var(--accent2);box-shadow:0 0 16px rgba(20,184,166,.2);transform:translateY(-3px)}
+        .chip.used{opacity:.25;cursor:default;transform:none;box-shadow:none;border-color:var(--chip-bg)}
+        .phase-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);padding:.3rem .75rem;border-radius:6px;background:rgba(20,184,166,.07);border:1px solid rgba(20,184,166,.13);margin-bottom:.75rem}
+        .phase-badge.p2{color:var(--success);background:rgba(56,189,248,.07);border-color:rgba(56,189,248,.13)}
+        .bridge-div{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:1.25rem 0}
+        .bridge-res{font-family:'JetBrains Mono',monospace;text-align:center;padding:.7rem 1rem;background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.18);border-radius:10px;color:var(--success);font-size:.95rem;animation:ein .4s ease}
+        .dev-step{opacity:0;transform:translateX(-15px);transition:all .4s ease;margin-top:.5rem}
+        .dev-step.show{opacity:1;transform:translateX(0)}
+        .dev-line{font-family:'JetBrains Mono',monospace;font-size:.88rem;padding:.35rem .75rem;border-radius:6px;background:var(--card2)}
+        .dev-final{border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.06);color:var(--success);font-size:.95rem;font-weight:700}
+        .dev-rnum{font-size:1.5rem;font-weight:700;color:var(--accent2);display:block;margin-top:.2rem}
+        .btn-p{background:linear-gradient(135deg,#14b8a6,#0ea5e9);color:#000;border:none;border-radius:10px;padding:.65rem 1.8rem;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:transform .15s,box-shadow .2s}
+        .btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(20,184,166,.3)}
+        .btn-p:active{transform:translateY(0)}
+        .btn-p:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
+        .btn-s{background:var(--card2);color:var(--fg);border:1px solid var(--border);border-radius:10px;padding:.65rem 1.8rem;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.92rem;cursor:pointer;transition:all .2s}
+        .btn-s:hover{border-color:var(--accent);color:var(--accent)}
+        .btn-sm{padding:.5rem 1.2rem;font-size:.85rem;border-radius:8px}
+        .btn-icon{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.4rem .65rem;cursor:pointer;font-size:.82rem;transition:all .2s}
+        .btn-icon:hover:not(.used){border-color:var(--accent);color:var(--accent)}
+        .btn-icon.used{opacity:.3;cursor:default}
+        .particle{position:fixed;width:7px;height:7px;border-radius:50%;pointer-events:none;z-index:100;animation:pb .65s ease-out forwards}
+        @keyframes pb{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+        .toast-c{position:fixed;top:72px;right:14px;z-index:200;display:flex;flex-direction:column;gap:6px}
+        .toast{padding:.55rem .9rem;border-radius:8px;font-size:.82rem;font-weight:500;animation:tin .25s ease;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+        .toast-s{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);color:var(--success)}
+        .toast-e{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);color:var(--error)}
+        .toast-i{background:rgba(20,184,166,.12);border:1px solid rgba(20,184,166,.25);color:var(--accent)}
+        .toast-out{animation:tout .25s ease forwards}
+        @keyframes tin{0%{opacity:0;transform:translateX(30px)}100%{opacity:1;transform:translateX(0)}}
+        @keyframes tout{0%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(30px)}}
+        @keyframes ein{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+        .score-big{font-size:clamp(2.5rem,9vw,4.5rem);font-weight:700;line-height:1;background:linear-gradient(135deg,#14b8a6,#2dd4bf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .rank-badge{font-size:1rem;font-weight:700;padding:.4rem 1.2rem;border-radius:50px;display:inline-block}
+        .rg{background:linear-gradient(135deg,#14b8a6,#2dd4bf);color:#000}
+        .rs{background:linear-gradient(135deg,#94a3b8,#cbd5e1);color:#000}
+        .rb{background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff}
+        .rk{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
+        .rcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;transition:transform .2s}
+        .rcard:hover{transform:translateX(3px)}
+        .bar-f{height:100%;border-radius:2px;transition:width 1s ease}
+        @media(max-width:640px){.pcard{padding:1.2rem;margin:0 .3rem}.formula-board{font-size:.82rem;padding:.7rem .5rem;line-height:2.2}.fslot{min-width:36px;height:28px;font-size:.8rem;padding:0 5px}.fpre{min-width:24px;height:24px;font-size:.78rem}.fval{min-width:36px;height:28px;font-size:.85rem;padding:0 7px}.chip{padding:.35rem .65rem;font-size:.88rem}}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+    </style>
+</head>
+<body>
+<div class="bg-blob b1"></div>
+<div class="bg-blob b2"></div>
+<div class="toast-c" id="toastC"></div>
+<div id="partC"></div>
+
+<!-- BIENVENIDA -->
+<div class="screen" id="scrW">
+    <div class="text-center px-4 max-w-2xl">
+        <div class="mb-2 text-sm font-mono tracking-widest uppercase" style="color:var(--muted)">Probabilidad Poisson</div>
+        <h1 class="wtitle mb-3">Desafio Poisson</h1>
+        <div class="formula-hero mb-4">P(X = k) = e<sup>&minus;&lambda;</sup> &middot; &lambda;<sup>k</sup> / k!</div>
+        <p class="mb-6 mx-auto" style="color:var(--muted);max-width:460px;font-size:.93rem">
+            Dos fases por ejercicio: primero calcula la tasa esperada &lambda; (tasa &times; intervalo) e identifica k, luego completa la formula de probabilidad. El juego calcula el resultado final por ti.
+        </p>
+        <div class="mb-8 text-left max-w-sm mx-auto" style="color:var(--muted);font-size:.84rem">
+            <div class="flex items-start gap-3 mb-2"><i class="fas fa-hand-pointer mt-0.5" style="color:var(--accent);width:16px"></i><span>Haz clic en una ficha y luego en el espacio donde va.</span></div>
+            <div class="flex items-start gap-3 mb-2"><i class="fas fa-layer-group mt-0.5" style="color:var(--accent);width:16px"></i><span><strong style="color:var(--fg)">Fase 1:</strong> Calcula &lambda; colocando la tasa y el intervalo de tiempo.</span></div>
+            <div class="flex items-start gap-3 mb-2"><i class="fas fa-chart-bar mt-0.5" style="color:var(--success);width:16px"></i><span><strong style="color:var(--fg)">Fase 2:</strong> Coloca &lambda; y k en la formula de probabilidad.</span></div>
+            <div class="flex items-start gap-3"><i class="fas fa-calculator mt-0.5" style="color:var(--accent);width:16px"></i><span>El juego calcula todos los resultados automaticamente.</span></div>
+        </div>
+        <button class="btn-p" onclick="startGame()"><i class="fas fa-play mr-2"></i>Comenzar</button>
+    </div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen hidden" id="scrG" style="justify-content:flex-start">
+    <div class="top-bar">
+        <div class="flex items-center justify-between mb-2">
+            <span class="font-mono text-sm" style="color:var(--muted)" id="pCtr">1 / 10</span>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1.5" style="color:var(--accent);font-size:.82rem"><i class="fas fa-fire"></i><span class="font-mono font-bold" id="strN">0</span></div>
+                <div class="flex items-center gap-1.5"><i class="fas fa-star" style="color:var(--accent);font-size:.82rem"></i><span class="font-mono font-bold" style="color:var(--accent2)" id="scN">0</span></div>
+            </div>
+        </div>
+        <div class="flex" id="progBar"></div>
+    </div>
+    <div class="flex-1 flex items-start justify-center pt-5 pb-12 px-3">
+        <div id="gCont" class="w-full" style="max-width:740px"></div>
+    </div>
+</div>
+
+<!-- RESULTADOS -->
+<div class="screen hidden" id="scrR">
+    <div class="text-center px-4 max-w-xl w-full" id="rCont"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// 10 EJERCICIOS DE PROBABILIDAD POISSON
+// ═══════════════════════════════════════════
+const EX=[
+{stmt:'Un call center recibe <strong style="color:var(--accent)">5</strong> llamadas por hora. &iquest;Cu&aacute;l es la probabilidad de recibir exactamente <strong style="color:var(--accent)">3</strong> llamadas en <strong style="color:var(--accent)">1</strong> hora?',
+rate:5,time:1,k:3,d1:['4','2','6'],d2:['4','8','15']},
+{stmt:'Un libro tiene <strong style="color:var(--accent)">0.01</strong> errores por p&aacute;gina. &iquest;Probabilidad de exactamente <strong style="color:var(--accent)">2</strong> errores en <strong style="color:var(--accent)">100</strong> p&aacute;ginas?',
+rate:0.01,time:100,k:2,d1:['0.1','50','3'],d2:['0.01','100','0.5']},
+{stmt:'Un cruce vial tiene <strong style="color:var(--accent)">2</strong> accidentes por semana. &iquest;Probabilidad de <strong style="color:var(--accent)">0</strong> accidentes en <strong style="color:var(--accent)">1</strong> semana?',
+rate:2,time:1,k:0,d1:['3','4','1'],d2:['1','3','0.5']},
+{stmt:'Recibes <strong style="color:var(--accent)">4</strong> correos spam por hora. &iquest;Probabilidad de recibir exactamente <strong style="color:var(--accent)">6</strong> en <strong style="color:var(--accent)">2</strong> horas?',
+rate:4,time:2,k:6,d1:['8','3','5'],d2:['4','2','10']},
+{stmt:'Por una parada pasan <strong style="color:var(--accent)">3</strong> autobuses por hora. &iquest;Probabilidad de ver exactamente <strong style="color:var(--accent)">3</strong> autobuses en <strong style="color:var(--accent)">2</strong> horas?',
+rate:3,time:2,k:3,d1:['6','1','4'],d2:['3','2','9']},
+{stmt:'Una tela tiene <strong style="color:var(--accent)">0.1</strong> defectos por metro. &iquest;Probabilidad de encontrar <strong style="color:var(--accent)">1</strong> defecto en <strong style="color:var(--accent)">20</strong> metros?',
+rate:0.1,time:20,k:1,d1:['0.2','10','2'],d2:['0.1','20','0.5']},
+{stmt:'Llegan <strong style="color:var(--accent)">7</strong> pacientes a urgencias por d&iacute;a. &iquest;Probabilidad de que lleguen exactamente <strong style="color:var(--accent)">5</strong> en <strong style="color:var(--accent)">1</strong> d&iacute;a?',
+rate:7,time:1,k:5,d1:['6','2','8'],d2:['5','1','12']},
+{stmt:'Atienden a <strong style="color:var(--accent)">2</strong> clientes por minuto en un banco. &iquest;Probabilidad de atender a <strong style="color:var(--accent)">4</strong> en <strong style="color:var(--accent)">3</strong> minutos?',
+rate:2,time:3,k:4,d1:['5','4','1'],d2:['2','3','5']},
+{stmt:'Hay <strong style="color:var(--accent)">0.5</strong> terremotos por a&ntilde;o en una zona. &iquest;Probabilidad de <strong style="color:var(--accent)">1</strong> terremoto en <strong style="color:var(--accent)">4</strong> a&ntilde;os?',
+rate:0.5,time:4,k:1,d1:['1','2','3'],d2:['0.5','4','3']},
+{stmt:'Una impresora falla <strong style="color:var(--accent)">1</strong> vez al mes. &iquest;Probabilidad de exactamente <strong style="color:var(--accent)">2</strong> fallos en <strong style="color:var(--accent)">3</strong> meses?',
+rate:1,time:3,k:2,d1:['2','4','1'],d2:['1','6','4']}
+];
+
+// ═══════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════
+function fact(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r}
+function fmtN(v){if(Number.isInteger(v))return v.toString();let s=v.toFixed(6).replace(/0+$/,'').replace(/\.$/,'');if(s.length>7)s=parseFloat(v.toFixed(4)).toString();return s}
+function shuf(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+
+// ═══════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════
+let S={idx:0,phase:1,score:0,streak:0,maxStreak:0,results:[],sel:null,placed:{},errs:{},hints:{},hintCt:0,perfect:true,cVal:null};
+
+// ═══════════════════════════════════════════
+// TOAST Y PARTÍCULAS
+// ═══════════════════════════════════════════
+function toast(m,t='i'){const c=document.getElementById('toastC'),e=document.createElement('div');e.className=`toast toast-${t}`;e.innerHTML=m;c.appendChild(e);setTimeout(()=>{e.classList.add('toast-out');setTimeout(()=>e.remove(),250)},2200)}
+function burst(el){const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,c=document.getElementById('partC'),cols=['#14b8a6','#38bdf8','#2dd4bf','#0ea5e9','#99f6e4'];for(let i=0;i<14;i++){const p=document.createElement('div');p.className='particle';const a=(Math.PI*2*i)/14+(Math.random()-.5)*.5,d=35+Math.random()*55;p.style.left=cx+'px';p.style.top=cy+'px';p.style.setProperty('--dx',Math.cos(a)*d+'px');p.style.setProperty('--dy',Math.sin(a)*d+'px');p.style.backgroundColor=cols[i%cols.length];const sz=5+Math.random()*4;p.style.width=sz+'px';p.style.height=sz+'px';c.appendChild(p);setTimeout(()=>p.remove(),700)}}
+function bigBurst(){const c=document.getElementById('partC'),cols=['#14b8a6','#38bdf8','#2dd4bf','#0ea5e9','#fff'];for(let i=0;i<35;i++){const p=document.createElement('div');p.className='particle';const a=Math.random()*Math.PI*2,d=80+Math.random()*120;p.style.left=innerWidth/2+'px';p.style.top=innerHeight/2+'px';p.style.setProperty('--dx',Math.cos(a)*d+'px');p.style.setProperty('--dy',Math.sin(a)*d+'px');p.style.backgroundColor=cols[i%cols.length];const sz=4+Math.random()*6;p.style.width=sz+'px';p.style.height=sz+'px';c.appendChild(p);setTimeout(()=>p.remove(),800)}}
+
+// ═══════════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════════
+function showScr(id){['scrW','scrG','scrR'].forEach(s=>document.getElementById(s).classList.toggle('hidden',s!==id))}
+function buildProg(){const b=document.getElementById('progBar');b.innerHTML='';EX.forEach((_,i)=>{const d=document.createElement('div');d.className='pseg';d.id=`sg${i}`;b.appendChild(d)})}
+function updProg(){EX.forEach((_,i)=>{const s=document.getElementById(`sg${i}`);s.className='pseg';if(i<S.idx){const r=S.results[i],ratio=r.score/r.max;s.classList.add(ratio>=.8?'sg':ratio>=.5?'sa':'se')}else if(i===S.idx)s.classList.add('sc')})}
+
+// ═══════════════════════════════════════════
+// FASE 1: CÁLCULO DE LAMBDA
+// ═══════════════════════════════════════════
+function mkP1Chips(ex){const ok=[{id:'rate',d:fmtN(ex.rate)},{id:'time',d:fmtN(ex.time)},{id:'k',d:ex.k.toString()}];const ds=ex.d1.map((d,i)=>({id:`a${i}`,d}));return shuf([...ok,...ds])}
+
+// ═══════════════════════════════════════════
+// FASE 2: PROBABILIDAD
+// ═══════════════════════════════════════════
+function mkP2Chips(ex){const ok=[{id:'lambda',d:fmtN(ex.rate*ex.time)},{id:'k',d:ex.k.toString()}];const ds=ex.d2.map((d,i)=>({id:`b${i}`,d}));return shuf([...ok,...ds])}
+function mkP2HTML(ex,lambda){
+    const k=ex.k;
+    let h=`<span class="ftxt">P(X = </span><span class="fpre">${k}</span><span class="ftxt">) = </span>`;
+    h+=`<span class="ftxt">e</span><span class="ftxt"><sup>&minus;</sup></span><span class="fslot" data-type="lambda" onclick="onSlot(this)">?</span>`;
+    h+=`<span class="ftimes">&middot;</span>`;
+    h+=`<span class="fslot" data-type="lambda" onclick="onSlot(this)">?</span><span class="ftxt"><sup><span class="fpre">${k}</span></sup></span>`;
+    h+=`<span class="ftxt"> / </span>`;
+    h+=`<span class="fslot" data-type="k" onclick="onSlot(this)">?</span><span class="ftxt">!</span>`;
+    return h;
+}
+
+// ═══════════════════════════════════════════
+// CARGAR EJERCICIO
+// ═══════════════════════════════════════════
+function loadEx(idx){
+    const ex=EX[idx];
+    S.idx=idx;S.phase=1;S.sel=null;S.placed={};S.errs={};S.hints={};S.hintCt=0;S.perfect=true;S.cVal=null;
+    const c1=mkP1Chips(ex),c2=mkP2Chips(ex);
+    document.getElementById('pCtr').textContent=`${idx+1} / ${EX.length}`;
+    document.getElementById('scN').textContent=S.score;
+    document.getElementById('strN').textContent=S.streak;
+    updProg();
+    document.getElementById('gCont').innerHTML=`
+    <div class="pcard">
+        <p class="text-base mb-5 leading-relaxed" style="font-weight:500">${ex.stmt}</p>
+        <div id="ph1">
+            <div class="phase-badge"><i class="fas fa-calculator mr-1.5"></i>Fase 1: Par&aacute;metros</div>
+            <div class="formula-board mb-4" id="fb1">
+                <span class="ftxt">&lambda; = </span><span class="fslot" data-type="rate" onclick="onSlot(this)">?</span><span class="ftxt"> &times; </span><span class="fslot" data-type="time" onclick="onSlot(this)">?</span><span class="ftxt" style="margin-left:12px">k = </span><span class="fslot" data-type="k" onclick="onSlot(this)">?</span>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-3" id="ch1">${c1.map(c=>`<div class="chip" data-cid="${c.id}" data-ph="1" onclick="onChip('${c.id}',1)">${c.d}</div>`).join('')}</div>
+            <div class="flex gap-2 mb-3">
+                <button class="btn-icon" id="hBtn1" onclick="useHint()"><i class="fas fa-lightbulb"></i></button>
+                <button class="btn-icon" onclick="resetEx()"><i class="fas fa-undo"></i></button>
+            </div>
+            <div id="ca1" class="hidden"><button class="btn-p btn-sm w-full" onclick="calcP1()"><i class="fas fa-calculator mr-1.5"></i>Calcular &lambda; y k</button></div>
+        </div>
+        <div id="bridge" class="hidden"></div>
+        <div id="ph2" class="hidden">
+            <div class="phase-badge p2"><i class="fas fa-chart-bar mr-1.5"></i>Fase 2: Probabilidad</div>
+            <div class="formula-board mb-4" id="fb2"></div>
+            <div class="flex flex-wrap gap-2 mb-3" id="ch2">${c2.map(c=>`<div class="chip" data-cid="${c.id}" data-ph="2" onclick="onChip('${c.id}',2)">${c.d}</div>`).join('')}</div>
+            <div class="flex gap-2 mb-3">
+                <button class="btn-icon" id="hBtn2" onclick="useHint()"><i class="fas fa-lightbulb"></i></button>
+            </div>
+            <div id="ca2" class="hidden"><button class="btn-p btn-sm w-full" onclick="calcP2()"><i class="fas fa-calculator mr-1.5"></i>Calcular resultado</button></div>
+        </div>
+        <div id="devA"></div>
+        <div id="nxtA"></div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// INTERACCIÓN: FICHA
+// ═══════════════════════════════════════════
+function onChip(cid,ph){
+    if(S.phase!==ph)return;
+    const el=document.querySelector(`.chip[data-cid="${cid}"]`);
+    if(el.classList.contains('used'))return;
+    document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));
+    if(S.sel===cid){S.sel=null;return}
+    S.sel=cid;el.classList.add('sel');
+}
+
+// ═══════════════════════════════════════════
+// INTERACCIÓN: SLOT
+// ═══════════════════════════════════════════
+function onSlot(el){
+    const type=el.dataset.type;
+    const t1=['rate','time','k'],t2=['lambda','k'];
+    if(S.phase===1&&!t1.includes(type))return;
+    if(S.phase===2&&!t2.includes(type))return;
+    if(el.classList.contains('filled')){rmType(type);return}
+    if(!S.sel){toast('Selecciona una ficha primero','i');return}
+    if(S.sel===type){plType(type,S.sel)}
+    else{S.errs[type]=(S.errs[type]||0)+1;S.perfect=false;el.classList.add('wf');setTimeout(()=>el.classList.remove('wf'),420);toast('Ese valor no va aqui','e')}
+}
+
+// ═══════════════════════════════════════════
+// COLOCAR / QUITAR TIPO
+// ═══════════════════════════════════════════
+function plType(type,cid){
+    const chip=document.querySelector(`.chip[data-cid="${cid}"]`);
+    S.placed[type]=cid;
+    document.querySelectorAll(`.fslot[data-type="${type}"]`).forEach(el=>{el.textContent=chip.textContent;el.classList.add('filled')});
+    chip.classList.remove('sel');chip.classList.add('used');
+    S.sel=null;burst(chip);
+    document.querySelectorAll(`.fslot[data-type="${type}"]`).forEach(el=>el.classList.remove('hg'));
+    chkFilled();
+}
+function rmType(type){
+    const cid=S.placed[type];if(!cid)return;delete S.placed[type];
+    document.querySelectorAll(`.fslot[data-type="${type}"]`).forEach(el=>{el.textContent='?';el.classList.remove('filled')});
+    document.querySelector(`.chip[data-cid="${cid}"]`).classList.remove('used');
+    chkFilled();
+}
+function chkFilled(){
+    const types=S.phase===1?['rate','time','k']:['lambda','k'];
+    const ok=types.every(t=>S.placed[t]);
+    document.getElementById(S.phase===1?'ca1':'ca2').classList.toggle('hidden',!ok);
+}
+
+// ═══════════════════════════════════════════
+// PISTA
+// ═══════════════════════════════════════════
+function useHint(){
+    const types=S.phase===1?['rate','time','k']:['lambda','k'];
+    const labels={rate:'tasa (eventos/unidad)',time:'intervalo de tiempo/unidades',k:'k (eventos deseados)',lambda:'lambda (&lambda;, tasa esperada total)'};
+    const empty=types.filter(t=>!S.placed[t]);
+    if(!empty.length){toast('Todos los espacios estan llenos','i');return}
+    if(S.hintCt>=3){toast('Maximo 3 pistas por ejercicio','e');return}
+    const pick=empty[Math.floor(Math.random()*empty.length)];
+    S.hints[pick]=true;S.hintCt++;S.perfect=false;
+    document.querySelectorAll(`.fslot[data-type="${pick}"]`).forEach(el=>el.classList.add('hg'));
+    const btn=S.phase===1?document.getElementById('hBtn1'):document.getElementById('hBtn2');
+    if(S.hintCt>=3)btn.classList.add('used');
+    toast(`<i class="fas fa-lightbulb mr-1"></i>Busca: <strong>${labels[pick]}</strong> (${S.hintCt}/3)`,'i');
+}
+
+// ═══════════════════════════════════════════
+// REINICIAR EJERCICIO
+// ═══════════════════════════════════════════
+function resetEx(){
+    S.phase=1;S.sel=null;S.placed={};S.errs={};S.hints={};S.hintCt=0;S.perfect=true;S.cVal=null;
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel','used'));
+    document.querySelectorAll('.fslot').forEach(s=>{s.textContent='?';s.classList.remove('filled','hg','wf','done')});
+    document.getElementById('ph2').classList.add('hidden');
+    document.getElementById('bridge').classList.add('hidden');
+    document.getElementById('devA').innerHTML='';
+    document.getElementById('nxtA').innerHTML='';
+    document.getElementById('ca1').classList.add('hidden');
+    document.getElementById('hBtn1').classList.remove('used');
+}
+
+// ═══════════════════════════════════════════
+// CALCULAR FASE 1: LAMBDA Y K
+// ═══════════════════════════════════════════
+function calcP1(){
+    const ex=EX[S.idx];
+    const lambda=ex.rate*ex.time;
+    S.cVal=lambda;
+    document.querySelectorAll('#fb1 .fslot').forEach(s=>{s.classList.remove('filled');s.classList.add('done');s.style.cursor='default'});
+    document.querySelectorAll('#ch1 .chip').forEach(c=>{c.classList.add('used')});
+    document.getElementById('ca1').classList.add('hidden');
+    document.getElementById('hBtn1').classList.add('used');
+    const bridge=document.getElementById('bridge');
+    bridge.classList.remove('hidden');
+    bridge.innerHTML=`
+        <div class="bridge-div"></div>
+        <div class="bridge-res">&lambda; = ${fmtN(ex.rate)} &times; ${fmtN(ex.time)} = <strong style="font-size:1.1rem">${fmtN(lambda)}</strong>, &nbsp;&nbsp; k = ${ex.k}</div>
+        <div class="bridge-div"></div>`;
+    burst(bridge.querySelector('.bridge-res'));
+    setTimeout(()=>{
+        S.phase=2;
+        document.getElementById('fb2').innerHTML=mkP2HTML(ex,lambda);
+        document.getElementById('ph2').classList.remove('hidden');
+        document.getElementById('hBtn2').classList.remove('used');
+        toast('Fase 2: coloca &lambda; y k en la formula','s');
+        document.getElementById('ph2').scrollIntoView({behavior:'smooth',block:'center'});
+    },600);
+}
+
+// ═══════════════════════════════════════════
+// CALCULAR FASE 2: RESULTADO FINAL
+// ═══════════════════════════════════════════
+function calcP2(){
+    const ex=EX[S.idx],lambda=S.cVal,k=ex.k;
+    const eNegLambda=Math.exp(-lambda),lambdaK=Math.pow(lambda,k),kFact=fact(k),res=eNegLambda*lambdaK/kFact;
+    
+    document.querySelectorAll('#fb2 .fslot').forEach(s=>{s.classList.remove('filled');s.classList.add('done');s.style.cursor='default'});
+    document.querySelectorAll('#ch2 .chip').forEach(c=>c.classList.add('used'));
+    document.getElementById('ca2').classList.add('hidden');
+    document.getElementById('hBtn2').classList.add('used');
+    
+    const steps=[
+        {l:`e^(-${fmtN(lambda)}) = ${fmtN(eNegLambda)}`,v:fmtN(eNegLambda)},
+        {l:`${fmtN(lambda)}^${k} = ${fmtN(lambdaK)}`,v:fmtN(lambdaK)},
+        {l:`${k}! = ${kFact}`,v:kFact.toString()},
+        {l:`P = ${fmtN(eNegLambda)} &times; ${fmtN(lambdaK)} / ${kFact}`,v:fmtN(res),fin:true}
+    ];
+    const dev=document.getElementById('devA');
+    dev.innerHTML=`<div class="text-xs font-mono mb-2" style="color:var(--success)"><i class="fas fa-check-circle mr-1"></i>Desarrollo del calculo</div>`;
+    steps.forEach((st,i)=>{
+        const d=document.createElement('div');d.className='dev-step';
+        d.innerHTML=st.fin?`<div class="dev-line dev-final">${st.l}<span class="dev-rnum">${st.v}</span></div>`:`<div class="dev-line" style="color:var(--fg)">${st.l}</div>`;
+        dev.appendChild(d);setTimeout(()=>d.classList.add('show'),400*(i+1));
+    });
+    
+    setTimeout(()=>{
+        let pts=0;
+        ['rate','time','k','lambda','k'].forEach(t=>{
+            let b=100;if(S.hints[t])b=25;else if(S.errs[t]>0)b=50;pts+=b;
+        });
+        // Ajuste para no contar 'k' dos veces en puntaje perfecto si se desea, 
+        // pero la estructura original sumaba 5 slots (100*5=500 + 200 = 700). 
+        // Contaremos 5 interacciones lógicas (rate, time, k, lambda, k) = 500 + 200.
+        if(S.perfect)pts+=200;
+        S.score+=pts;
+        if(S.perfect){S.streak++;if(S.streak>S.maxStreak)S.maxStreak=S.streak}else S.streak=0;
+        S.results.push({score:pts,max:700,perfect:S.perfect,hints:S.hintCt});
+        document.getElementById('scN').textContent=S.score;
+        document.getElementById('strN').textContent=S.streak;
+        updProg();
+        if(S.perfect){bigBurst();toast(`Perfecto! +${pts} pts (+200 bonus)`,'s')}
+        else toast(`+${pts} pts`,'s');
+        const last=S.idx>=EX.length-1;
+        document.getElementById('nxtA').innerHTML=`<div class="mt-5 flex justify-end"><button class="btn-p" onclick="${last?'showResults()':'nextEx()'}">${last?'<i class="fas fa-trophy mr-2"></i>Ver resultados':'Siguiente<i class="fas fa-arrow-right ml-2"></i>'}</button></div>`;
+    },400*(steps.length+1));
+}
+
+// ═══════════════════════════════════════════
+// SIGUIENTE EJERCICIO
+// ═══════════════════════════════════════════
+function nextEx(){
+    const c=document.getElementById('gCont');c.style.opacity='0';c.style.transform='translateY(-15px)';c.style.transition='opacity .25s,transform .25s';
+    setTimeout(()=>{loadEx(S.idx+1);c.style.opacity='1';c.style.transform='translateY(0)'},260);
+}
+
+// ═══════════════════════════════════════════
+// RESULTADOS FINALES
+// ═══════════════════════════════════════════
+function showResults(){
+    showScr('scrR');
+    const mx=EX.length*700,te=S.results.reduce((s,r)=>s+r.score,0),pct=mx>0?(te/mx*100):0;
+    const pf=S.results.filter(r=>r.perfect).length;
+    let rank,rc;
+    if(pct>=90){rank='Maestro Poisson';rc='rg'}
+    else if(pct>=70){rank='Experto';rc='rs'}
+    else if(pct>=50){rank='Aprendiz';rc='rb'}
+    else{rank='Principiante';rc='rk'}
+    document.getElementById('rCont').innerHTML=`
+    <div class="mb-1 text-xs font-mono tracking-widest uppercase" style="color:var(--muted)">RESULTADOS FINALES</div>
+    <div class="score-big mb-1">${te}</div>
+    <div class="text-sm mb-3" style="color:var(--muted)">de ${mx} puntos posibles</div>
+    <div class="mb-6"><span class="rank-badge ${rc}">${rank}</span></div>
+    <div class="grid grid-cols-3 gap-3 mb-8">
+        <div class="text-center p-3 rounded-xl" style="background:var(--card);border:1px solid var(--border)"><div class="text-2xl font-bold font-mono" style="color:var(--success)">${pf}/${EX.length}</div><div class="text-xs mt-1" style="color:var(--muted)">Perfectos</div></div>
+        <div class="text-center p-3 rounded-xl" style="background:var(--card);border:1px solid var(--border)"><div class="text-2xl font-bold font-mono" style="color:var(--accent)">${Math.round(pct)}%</div><div class="text-xs mt-1" style="color:var(--muted)">Precision</div></div>
+        <div class="text-center p-3 rounded-xl" style="background:var(--card);border:1px solid var(--border)"><div class="text-2xl font-bold font-mono" style="color:var(--fg)">${S.maxStreak}</div><div class="text-xs mt-1" style="color:var(--muted)">Mejor racha</div></div>
+    </div>
+    <div class="text-left mb-8">
+        <div class="text-sm font-semibold mb-3" style="color:var(--muted)">Detalle por ejercicio</div>
+        <div class="flex flex-col gap-2">${S.results.map((r,i)=>{
+            const ratio=r.score/r.max,bc=ratio>=.8?'var(--success)':ratio>=.5?'var(--accent)':'var(--error)';
+            const short=EX[i].stmt.replace(/<[^>]*>/g,'').substring(0,52)+'...';
+            return`<div class="rcard"><div class="flex items-center justify-between mb-1.5"><div class="flex items-center gap-2"><span class="text-xs font-mono" style="color:var(--muted)">${i+1}.</span><span class="text-sm" style="color:var(--fg)">${short}</span>${r.perfect?'<i class="fas fa-crown" style="color:var(--accent2);font-size:.7rem"></i>':''}</div><span class="text-sm font-mono font-bold" style="color:${bc}">${r.score}/${r.max}</span></div><div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div class="bar-f" style="width:${ratio*100}%;background:${bc}"></div></div><div class="text-xs mt-1" style="color:var(--muted)">${r.hints>0?r.hints+' pista(s)':'Sin pistas'}</div></div>`}).join('')}</div>
+    </div>
+    <div class="flex gap-3 justify-center flex-wrap">
+        <button class="btn-p" onclick="startGame()"><i class="fas fa-redo mr-2"></i>Jugar de nuevo</button>
+        <button class="btn-s" onclick="showScr('scrW')"><i class="fas fa-home mr-2"></i>Inicio</button>
+    </div>`;
+    setTimeout(()=>{document.querySelectorAll('.bar-f').forEach(b=>{const w=b.style.width;b.style.width='0%';setTimeout(()=>b.style.width=w,100)})},50);
+    if(pct>=70)bigBurst();
+}
+
+// ═══════════════════════════════════════════
+// INICIAR JUEGO
+// ═══════════════════════════════════════════
+function startGame(){
+    S={idx:0,phase:1,score:0,streak:0,maxStreak:0,results:[],sel:null,placed:{},errs:{},hints:{},hintCt:0,perfect:true,cVal:null};
+    showScr('scrG');buildProg();loadEx(0);
+}
+
+document.addEventListener('click',e=>{
+    if(!e.target.closest('.chip')&&!e.target.closest('.fslot')&&S.sel){
+        document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));S.sel=null;
+    }
+});
+</script>
+</body>
+</html>
